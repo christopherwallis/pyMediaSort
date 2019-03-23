@@ -3,53 +3,58 @@
 import os
 import shutil
 import re
-import csv
-import SortMovies
-from pyMediaSort.setup import Directory
+# import csv
+# import SortMovies
+from setup import Directory, SetupError
 # from GetMagnetRSS import create_to_download
+
+
+# Default directories:
+default_initial = os.getcwd()
+default_tv = os.path.join(os.getcwd(), "tv")
+default_movies = os.path.join(os.getcwd(), "Movies")
 
 
 class MediaFile(object):
     """
     Object associated with a media file
     """
-    def __init__(self, filename):
+    def __init__(self, filename, progresscbf=print):
         self.filename = filename
         self.directory = None
         self.season = None
         self.title = None
         self.source = None
+        self.progresscbf = progresscbf
 
 
 class Sorter:
     """
     Creates sorting object for a particular folder and media type
     """
-    def __init__(self, config):
+    def __init__(self, config, progresscbf):
         self.config = config
+        self.progresscbf = progresscbf
         self.tv_directories = []
 
     @classmethod
-    def tv(cls, initial=None, final=None):
-        call = []
-        if initial:
-            call.append(''.join(["path_initial=", initial]))
-        if final:
-            call.append(''.join(["path_final=", final]))
-        print("Setup Call: {}".format(call))
-        config = Directory.tv_shows(call)
-        return cls(config)
+    def tv(cls, initial=None, final=None, verbose=False, progresscbf=print):
+        if not initial:
+            raise SetupError("Initial file location missing")
+        if not final:
+            raise SetupError("Final file location missing")
+        config = Directory.tv_shows(path_initial=initial, path_destination=final, verbose=verbose, progresscbf=progresscbf)
+        return cls(config, progresscbf)
 
     @classmethod
-    def movies(cls, initial=None, final=None):
-        call = []
-        if initial:
-            call.append(''.join(["path_initial=", initial]))
-        if final:
-            call.append(''.join(["path_final=", final]))
-        print("Setup Call: {}".format(call))
-        config = Directory.movies(call)
-        return cls(config)
+    def movies(cls, initial=None, final=None, verbose=False, progresscbf=print):
+        call = ""
+        if not initial:
+            raise SetupError("Initial file location missing")
+        if not final:
+            raise SetupError("Final file location missing")
+        config = Directory.movies(path_initial=initial, path_final=final, verbose=verbose, progresscbf=progresscbf)
+        return cls(config, progresscbf)
 
     # Should be tested but also working
     def get_title(self, file, delim):
@@ -71,13 +76,15 @@ class Sorter:
                             word = word.lower()
                             stripped = word.strip('s').split('e')
                             file.season = int(stripped[0])
-                        except Exception:
+                        except Exception as e:
+                            if self.config.verbose:
+                                self.progresscbf(e)
                             try:
                                 stripped = word.strip('[').strip(']').split('x')
                                 file.season = int(stripped[0])
-                            except Exception:
-                                # print("Failed to get season")
-                                pass
+                            except Exception as e:
+                                if self.config.verbose:
+                                    self.progresscbf(e)
                         file.title = title.strip(" ").lower()
                         # print("Title: {}".format(file.title))
                         return file.title
@@ -95,7 +102,7 @@ class Sorter:
                 for word2 in split_word:
                     split_directory.append(word2)
             if self.config.verbose:
-                print(split_directory)
+                self.progresscbf(split_directory)
             title = ""
 
             for word in split_directory:
@@ -103,19 +110,18 @@ class Sorter:
                     regex = re.compile(code)
                     if re.match(regex, word):
                         if self.config.verbose:
-                            print("Move: {}".format(title))
+                            self.progresscbf("Move: {}".format(title))
                         self.title = title.strip(" ")
                         return True
                 title = title + " "
                 title = title + word
             if self.config.verbose:
-                print("Skip: {}".format(title))
+                self.progresscbf("Skip: {}".format(title))
             self.title = title.strip(" ")
             return False
 
     def sort_files(self):
         if self.config.tv:
-            global moved
             files = []
             for dirname, dirnames, filenames in os.walk(self.config.path_initial):
                 # print(filenames)
@@ -125,10 +131,10 @@ class Sorter:
                     if filename.split('.')[-1] in self.config.extension_list:
                         file.source = self.config.fullpath(dirname, filename)
                         # print(source)
-                        file.title = self.config.get_title(file, '.')
+                        file.title = self.get_title(file, '.')
                         # print(filename)
                         if file.title is False:
-                            file.title = self.config.get_title(file, ' ')
+                            file.title = self.get_title(file, ' ')
                         # print(file.title)
                         if filename is None:
                             # print("Pass")
@@ -136,41 +142,44 @@ class Sorter:
                         # elif file.title is "":
                         #     print("No title  : Moving {} to {}".format(file.filename, path_other))
                         #     shutil.move(file.source, self.config.fullpath(path_other, filename))
-                        elif file.title in self.config.dir_lookup:
-                            destination = self.config.dir_lookup[file.title]
+                        elif file.title in self.tv_directories:
+                            destination = self.tv_directories[file.title]
                             destination = destination + "Season {}\\".format(file.season)
                             if not os.path.isdir(destination):
                                 # print("Directory does not exist: Creating")
                                 os.mkdir(destination)
-                            print("Recognised: Moving {} to {}".format(file.title, destination))
+                            self.progresscbf("Recognised: Moving {} to {}".format(file.title, destination))
                             shutil.move(file.source, self.config.fullpath(destination, filename))
-                            moved += 1
+                            self.config.moved += 1
                         else:
                             # print("Default   : Moving {} to {}".format(file.title, path_other))
                             # shutil.move(file.source, self.config.fullpath(path_other, filename))
                             pass
                     files.append(file)
+            self.progresscbf("Total files: {}".format(len(files)))
         if self.config.movie:
-            global moved
+            if self.config.verbose:
+                self.progresscbf("Sorting movie files:")
+                self.progresscbf(self.config.path_initial)
             folders = []
             for dirname, dirnames, filenames in os.walk(self.config.path_initial):
                 if self.config.verbose:
-                    print("dirnames: {}".format(dirnames))
+                    self.progresscbf("dirnames: {}".format(dirnames))
                 for folder in dirnames:
                     folders.append(MovieFolder(folder, self.config))
                 for movie in folders:
                     movie.source = self.config.fullpath(dirname, movie.directory)
                     if self.config.verbose:
-                        print("Source: {}".format(movie.source))
+                        self.progresscbf("Source: {}".format(movie.source))
                     if movie.get_title(verbose=self.config.verbose):
-                        print("Recognised: Moving {} to {}".format(movie.source, self.config.path_final))
+                        self.progresscbf("Recognised: Moving {} to {}".format(movie.source, self.config.path_final))
                         try:
                             shutil.move(movie.source, self.config.path_final)
-                            moved += 1
+                            self.config.moved += 1
                         except shutil.Error as e:
-                            print(e)
-            print("Total folders: {}".format(len(folders)))
-            print("Folders moved: {}".format(moved))
+                            self.progresscbf(e)
+            self.progresscbf("Total folders: {}".format(len(folders)))
+        self.progresscbf("Folders moved: {}".format(self.config.moved))
     #
     # def store_names(directory, location):
     #     w = csv.writer(open(location, "w"))
@@ -190,13 +199,23 @@ class Sorter:
         self.tv_directories = dir_lookup
 
     def sort_media(self):
+        if self.config.tv:
+            self.progresscbf("Sorting TV files:")
+            if self.config.verbose:
+                self.progresscbf("Current Directory: {}".format(self.config.path_initial))
+                self.progresscbf("Target Directory:  {}".format(self.config.path_final))
+        if self.config.movie:
+            self.progresscbf("Sorting Movie files:")
+            if self.config.verbose:
+                self.progresscbf("Current Directory: {}".format(self.config.path_initial))
+                self.progresscbf("Target Directory:  {}".format(self.config.path_final))
         self.make_list()
         self.sort_files()
 
 
 class MovieFolder(MediaFile):
-    def __init__(self, directory, config):
-        super().__init__(None)
+    def __init__(self, directory, config, progresscbf=print):
+        super().__init__(None, progresscbf=progresscbf)
         self.config = config
         self.directory = directory
 
@@ -209,25 +228,22 @@ class MovieFolder(MediaFile):
             for word2 in split_word:
                 split_directory.append(word2)
         if verbose:
-            print(split_directory)
+            self.progresscbf(split_directory)
         title = ""
 
         for word in split_directory:
-            for code in config.regex_list:
+            for code in self.config.regex_list:
                 regex = re.compile(code)
                 if re.match(regex, word):
                     if verbose:
-                        print("Move: {}".format(title))
+                        self.progresscbf("Move: {}".format(title))
                     self.title = title.strip(" ")
                     return True
             title = title + " "
             title = title + word
         if verbose:
-            print("Skip: {}".format(title))
+            self.progresscbf("Skip: {}".format(title))
         self.title = title.strip(" ")
         return False
 
-
-tv_sorter = Sorter.tv()
-tv_sorter.sort_tv()
 
