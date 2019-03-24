@@ -1,12 +1,12 @@
 from pyMediaSort import Sorter
 
 
-initial = "E:\\Media\\Shared"
-tv = "E:\\Media\\TV"
-movies = "M:\\Media\\Movies"
+initial = "/media/pi/Downloads/Torrents"
+tv = "/media/pi/CLEARSSD120/tv"
+movies = "/media/pi/CLEARSSD120/movies"
 
 
-tv_sorter = Sorter.tv(initial=initial, final=tv, verbose=True)
+tv_sorter = Sorter.tv(initial=initial, final=tv, verbose=True, windows=False)
 tv_sorter.sort_media()
-movie_sorter = Sorter.movies(initial=initial, final=movies, verbose=True)
+movie_sorter = Sorter.movies(initial=initial, final=movies, verbose=True, windows=False)
 movie_sorter.sort_media()
