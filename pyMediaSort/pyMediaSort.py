@@ -38,22 +38,22 @@ class Sorter:
         self.tv_directories = []
 
     @classmethod
-    def tv(cls, initial=None, final=None, verbose=False, progresscbf=print):
+    def tv(cls, initial=None, final=None, verbose=False, progresscbf=print, windows=True):
         if not initial:
             raise SetupError("Initial file location missing")
         if not final:
             raise SetupError("Final file location missing")
-        config = Directory.tv_shows(path_initial=initial, path_destination=final, verbose=verbose, progresscbf=progresscbf)
+        config = Directory.tv_shows(path_initial=initial, path_destination=final, verbose=verbose, progresscbf=progresscbf, windows=windows)
         return cls(config, progresscbf)
 
     @classmethod
-    def movies(cls, initial=None, final=None, verbose=False, progresscbf=print):
+    def movies(cls, initial=None, final=None, verbose=False, progresscbf=print, windows=True):
         call = ""
         if not initial:
             raise SetupError("Initial file location missing")
         if not final:
             raise SetupError("Final file location missing")
-        config = Directory.movies(path_initial=initial, path_final=final, verbose=verbose, progresscbf=progresscbf)
+        config = Directory.movies(path_initial=initial, path_final=final, verbose=verbose, progresscbf=progresscbf, windows=windows)
         return cls(config, progresscbf)
 
     # Should be tested but also working
@@ -135,7 +135,7 @@ class Sorter:
                         # print(filename)
                         if file.title is False:
                             file.title = self.get_title(file, ' ')
-                        # print(file.title)
+                        print(file.title)
                         if filename is None:
                             # print("Pass")
                             pass
@@ -188,10 +188,11 @@ class Sorter:
 
     def make_list(self):
         dir_lookup = {}
+        print("Directory split: {}".format(self.config.dirsplit))
         for dirname, dirnames, filenames in os.walk(self.config.path_final):
-            splitted = dirname.split('\\')
+            splitted = dirname.split(self.config.dirsplit)
             lowerc = splitted[-1].lower()
-            dir_full = dirname + "\\"
+            dir_full = dirname + self.config.dirsplit
             if "season" not in lowerc:
                 # print("Adding: " + lowerc)
                 dir_lookup.update({lowerc: dir_full})
@@ -210,6 +211,7 @@ class Sorter:
                 self.progresscbf("Current Directory: {}".format(self.config.path_initial))
                 self.progresscbf("Target Directory:  {}".format(self.config.path_final))
         self.make_list()
+        # print(self.tv_directories)
         self.sort_files()
 
 

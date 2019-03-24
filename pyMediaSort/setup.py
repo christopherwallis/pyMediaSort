@@ -12,7 +12,7 @@ default_movies = os.path.join(os.getcwd(), "Movies")
 
 # Configuration settings for a directory of media files
 class Directory:
-    def __init__(self, path_final, path_initial, path_output, extension_list, regex_list, delim, regex_remove, verbose=False, tv=False, movie=False, progresscbf=print):
+    def __init__(self, path_final, path_initial, path_output, extension_list, regex_list, delim, regex_remove, verbose=False, tv=False, movie=False, progresscbf=print, windows=True):
         self.fullpath = os.path.join
         self.path_final = path_final
         self.path_initial = path_initial
@@ -26,9 +26,13 @@ class Directory:
         self.tv = tv
         self.movie = movie
         self.progresscbf = progresscbf
+        if windows:
+            self.dirsplit = '\\'
+        else:
+            self.dirsplit = '/'
 
     @classmethod
-    def tv_shows(cls, path_destination=default_tv, path_initial=default_initial, verbose=False, progresscbf=print):
+    def tv_shows(cls, path_destination=default_tv, path_initial=default_initial, verbose=False, progresscbf=print, windows=True):
         path_tv = path_destination
         path_initial = path_initial
         names_out = os.path.join(path_initial, "TV_output.csv")
@@ -47,10 +51,10 @@ class Directory:
         regex_remove = '-'
         return cls(path_final=path_tv, path_initial=path_initial, path_output=names_out, extension_list=extension_list,
                    regex_list=regex_list, delim=delim, regex_remove=regex_remove, verbose=verbose, tv=True,
-                   progresscbf=progresscbf)
+                   progresscbf=progresscbf, windows=windows)
 
     @classmethod
-    def movies(cls, path_initial=default_initial, path_final=default_movies, verbose=False, progresscbf=print):
+    def movies(cls, path_initial=default_initial, path_final=default_movies, verbose=False, progresscbf=print, windows=True):
         print("Verbose: {}".format(verbose))
         # path_initial = path_initial
         # movie_destination = path_final
@@ -66,7 +70,7 @@ class Directory:
         regex_remove = '-'
         return cls(path_initial=path_initial, path_final=path_final, path_output=names_out,
                    extension_list=extension_list, regex_list=regex_list, delim=delim, regex_remove=regex_remove,
-                   verbose=verbose, movie=True, progresscbf=progresscbf)
+                   verbose=verbose, movie=True, progresscbf=progresscbf, windows=True)
 
 
 class SetupError(Exception):
