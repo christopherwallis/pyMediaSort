@@ -1,7 +1,7 @@
 from pyMediaSort import Sorter
 
 
-initial = "/media/pi/Downloads/"
+initial = "/home/pi/Downloads/"
 tv = "/media/pi/CLEARSSD120/tv"
 movies = "/media/pi/CLEARSSD120/movies"
 
