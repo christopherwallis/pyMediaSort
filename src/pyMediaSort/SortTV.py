@@ -7,11 +7,6 @@ import csv
 import argparse
 import pathlib
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-i", "--input", help="Input directory")
-parser.add_argument("-o", "--output", help="Output directory")
-parser.add_argument("--loose", action='store_true')
-args = parser.parse_args()
 
 extension_list = {
     r"avi",
@@ -135,17 +130,45 @@ def SortFiles(dir_lookup, input_path, other=False, loose=False):
     return files, count
 
 
-def main(input_location, output_location, loose_matches=False):
+def main(input_dir=None, output_dir=None, loose_regex=None, sys_args=None):
+    """ Entry point access """
+
+    if sys_args:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-i", "--input", help="Input directory")
+        parser.add_argument("-o", "--output", help="Output directory")
+        parser.add_argument("--loose", action='store_true')
+        args = parser.parse_args(sys_args)
+
+    # Get commandline args if no inputs selected:
+    if not input_dir:
+        input_dir = args.input
+    if not output_dir:
+        output_dir = args.output
+    if not loose_regex:
+        loose_regex = args.loose
+
+    # Check outputs exist and return readable error if not.
+    if not input_dir or not output_dir:
+        print(f"Input: {input_dir}")
+        print(f"Output: {output_dir}")
+        raise IOError("Input directory and Target/output directory required.")
+    _main(input_dir, output_dir, loose_matches=loose_regex)
+
+
+def _main(input_location, output_location, loose_matches=False):
+    input_location = pathlib.Path(input_location)
+    output_location = pathlib.Path(output_location)
+
     print("#########################################################################")
     print("##                           Sort TV                                   ##")
     print("#########################################################################")
     print("##  Sort TV from: {}".format(input_location))
     print("##  Sort TV to:   {}".format(output_location))
-    dirs = MakeList(out)
+    dirs = MakeList(output_location)
+    if len(dirs) == 0:
+        raise IOError("No output folders detected")
     print(f"##  Directories:  {len(dirs):>4}")
-    # shutil.move(names_out, names_out + ".backup")
-    # StoreNames(dir, names_out)
-    # create_to_download(names_out)
     output = SortFiles(dirs, input_location, loose=loose_matches)
     print(f"##  Files found:  {len(output[0]):>4}")
     print(f"##  Files sorted: {output[1]:>4}")
@@ -178,6 +201,4 @@ def MakeList(path):
 
 
 if __name__ == "__main__":
-    inp = args.input
-    out = args.output
-    main(inp, out, loose_matches=args.loose)
+    _main()
