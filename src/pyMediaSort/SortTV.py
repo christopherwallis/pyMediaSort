@@ -121,9 +121,10 @@ def SortFiles(dir_lookup, input_path, other=False, loose=False):
                     print("Recognised: Moving {} to {}".format(file.title, destination))
                     shutil.move(file.source, pathlib.Path(destination, filename))
                     count += 1
-                    if dirname != input_path:  # If the file isn't in the base directory, move the directory (and contents) to a trash folder once file is sorted.
-                        trash_folder = pathlib.Path(input_path) / 'trash' / file.title
-                        shutil.move(pathlib.Path(file.source).parent, trash_folder)
+                    # Caused issues on some file systems and for multiple media files per folder: Removed until fix can be implemented
+                    # if dirname != input_path:  # If the file isn't in the base directory, move the directory (and contents) to a trash folder once file is sorted.
+                    #     trash_folder = pathlib.Path(input_path) / 'trash' / file.title
+                    #     shutil.move(pathlib.Path(file.source).parent, trash_folder)
                 else:
                     pass
             files.append(file)
