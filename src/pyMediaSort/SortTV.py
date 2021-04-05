@@ -6,6 +6,18 @@ import re
 import csv
 import argparse
 import pathlib
+# import subprocess
+import sys
+import time
+try:
+    from rich import pretty, print
+    from rich.panel import Panel
+    from rich.padding import Padding
+    pretty.install()
+    ENRICHED = True
+except ImportError as e:
+    ENRICHED = False
+    print(e)
 
 
 extension_list = {
@@ -73,9 +85,15 @@ def get_title(file, delim, loose_regex=False):
                         stripped = word.strip('[').strip(']').split('x')
                         file.season = int(stripped[0])
                     except Exception:
-                        print("Failed to get season")
+                        if ENRICHED:
+                            print("[red]Failed to get season")
+                        else:
+                            print("Failed to get season")
                 file.title = title.strip(" ").lower()
-                print("Title: {}".format(file.title))
+                if ENRICHED:
+                    print("Title: [magenta]{}".format(file.title))
+                else:
+                    print("Title: {}".format(file.title))
                 return file.title
             elif word in extension_list:
                 return False
@@ -104,7 +122,7 @@ def SortFiles(dir_lookup, input_path, other=False, loose=False):
                 file.title = get_title(file, '.', loose_regex=loose)  # Get the title from the filename
                 if file.title is False:
                     file.title = get_title(file, ' ')
-                print(file.title)
+                # print(file.title)
                 if filename is None:
                     # print("Pass")
                     pass
@@ -118,7 +136,11 @@ def SortFiles(dir_lookup, input_path, other=False, loose=False):
                     if not os.path.isdir(destination):  # Create new season directory if required
                         print("Directory does not exist: Creating")
                         os.mkdir(destination)
-                    print("Recognised: Moving {} to {}".format(file.title, destination))
+                    if ENRICHED:
+                        print("[red]Recognised:[white] Moving {} to {}".format(file.title, destination))
+                    else:
+                        print("Recognised: Moving {} to {}".format(file.title, destination))
+
                     shutil.move(file.source, pathlib.Path(destination, filename))
                     count += 1
                     # Caused issues on some file systems and for multiple media files per folder: Removed until fix can be implemented
@@ -154,26 +176,55 @@ def main(input_dir=None, output_dir=None, loose_regex=None, sys_args=None):
         print(f"Input: {input_dir}")
         print(f"Output: {output_dir}")
         raise IOError("Input directory and Target/output directory required.")
+    lockfile = pathlib.Path(input_dir, 'lock.txt')
+    if lockfile.is_file():
+        print("Directory locked, waiting...")
+        time.sleep(5)
+        if lockfile.is_file():
+            print("Directory locked, skipping")
+            return 99
+    print("No lock on directory")
     _main(input_dir, output_dir, loose_matches=loose_regex)
 
 
 def _main(input_location, output_location, loose_matches=False):
     input_location = pathlib.Path(input_location)
     output_location = pathlib.Path(output_location)
-
-    print("#########################################################################")
-    print("##                           Sort TV                                   ##")
-    print("#########################################################################")
-    print("##  Sort TV from: {}".format(input_location))
-    print("##  Sort TV to:   {}".format(output_location))
+    if ENRICHED:
+        t = Panel(f"\t[white]Sort From:[bright white]\t\t{input_location}\n"
+                  f"\t[white]Sort To:  [bright white]\t\t{output_location}")
+        t.title = "[blue]Sort TV"
+        t.border_style = "bold blue"
+        t.title_align = "center"
+        print(t)
+    else:
+        print("#########################################################################")
+        print("##                           Sort TV                                   ##")
+        print("#########################################################################")
+        print("##  Sort TV from: {}".format(input_location))
+        print("##  Sort TV to:   {}".format(output_location))
     dirs = MakeList(output_location)
     if len(dirs) == 0:
         raise IOError("No output folders detected")
-    print(f"##  Directories:  {len(dirs):>4}")
+
     output = SortFiles(dirs, input_location, loose=loose_matches)
-    print(f"##  Files found:  {len(output[0]):>4}")
-    print(f"##  Files sorted: {output[1]:>4}")
-    print("#########################################################################")
+
+    if ENRICHED:
+        t = Panel(f"\t [white]Directories: [light-grey]\t\t{len(dirs):>4}\n"
+                  f"\t [white]Files Found: [grey]\t\t{len(output[0]):>4}\n"
+                  f"[bold white]\t Files Sorted:\t\t[red]{output[1]:>4}")
+        t.title = "[blue]Sort Complete"
+        t.border_style = "bold blue"
+        t.title_align = "center"
+        print(t)
+
+        t = Padding("", (0, 0), style="on green", expand=True)
+        print(t)
+    else:
+        print(f"##  Directories:  {len(dirs):>4}")
+        print(f"##  Files found:  {len(output[0]):>4}")
+        print(f"##  Files sorted: {output[1]:>4}")
+        print("#########################################################################")
 
 
 def StoreNames(directory, location):
@@ -202,4 +253,4 @@ def MakeList(path):
 
 
 if __name__ == "__main__":
-    _main()
+    main(sys_args=sys.argv[1:])

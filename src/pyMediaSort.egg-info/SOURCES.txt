@@ -1,0 +1,12 @@
+README.md
+setup.cfg
+setup.py
+src/pyMediaSort/SortTV.py
+src/pyMediaSort/__init__.py
+src/pyMediaSort/__main__.py
+src/pyMediaSort.egg-info/PKG-INFO
+src/pyMediaSort.egg-info/SOURCES.txt
+src/pyMediaSort.egg-info/dependency_links.txt
+src/pyMediaSort.egg-info/entry_points.txt
+src/pyMediaSort.egg-info/not-zip-safe
+src/pyMediaSort.egg-info/top_level.txt
